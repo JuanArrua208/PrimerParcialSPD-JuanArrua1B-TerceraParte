@@ -1,0 +1,472 @@
+// C++ code
+//
+// Juan arrua 
+// Division B
+
+//defino las entradas
+#define C 5
+#define D 6
+#define E 7
+#define G 8
+#define F 9
+#define A 10
+#define B 11
+#define INTERRUPTOR 2
+#define MOTOR A2
+
+#define pausaGeneral 10
+
+#define SENSOR_TEMPERATURA A0
+#define SENSOR_LUZ_AMB A3
+
+#define VISUALIZADOR_R A4
+#define VISUALIZADOR_L A5
+
+//inicializo los contadores de decimal y unidad y el contador de temperatura
+int contadorTemperatura = 0;
+int decimal = 0;
+int unidad = 0;
+
+//declaro las variables de lectura de temperatura y la de temperatura
+int lecturaTemp;
+int temperatura;
+int lecturaLuz;
+//int luz;
+
+// en el setup hago el pinMode de todos los elementos que uso
+void setup()
+{
+  pinMode(A, OUTPUT);
+  pinMode(B, OUTPUT);
+  pinMode(C, OUTPUT);
+  pinMode(D, OUTPUT);
+  pinMode(E, OUTPUT);
+  pinMode(F, OUTPUT);
+  pinMode(G, OUTPUT);
+  
+  pinMode(VISUALIZADOR_R, OUTPUT);
+  pinMode(VISUALIZADOR_L, OUTPUT);
+  
+  pinMode(INTERRUPTOR, OUTPUT);
+  pinMode(MOTOR, OUTPUT);
+  pinMode(SENSOR_TEMPERATURA, INPUT);
+  pinMode(SENSOR_LUZ_AMB, INPUT);
+  
+  Serial.begin(9600);
+}
+
+
+void loop()
+{
+  // lee y traduce la temperatura del sensor de temperatura
+  // se le agrega el valor de temperatura al contador
+  // y lee el valor del sensor de luz ambiental
+  lecturaTemp = analogRead(SENSOR_TEMPERATURA);
+  temperatura = map(lecturaTemp, 20, 358, -40, 125);
+  contadorTemperatura = temperatura;
+  lecturaLuz = analogRead(SENSOR_LUZ_AMB);
+  
+  contadorTemperatura = controlarContador(contadorTemperatura);
+  
+  apagarPrenderNumeros(lecturaLuz, contadorTemperatura);
+  
+  mostrarTemperatura(temperatura, lecturaLuz);
+  
+  prenderApagarMotor(temperatura);
+  
+}
+
+
+/*
+En esta parte le agregué la funcionalidad la cual le permite 
+mostrar o no las luces de los visualizadores de 7 segmentos, 
+según la cantidad de luz del ambiente. 
+En caso de que haya luz, los visualizadores se prenden, 
+y en caso de que haya poca o nada de luz, 
+los visualizadores se apagan.
+*/
+void apagarPrenderNumeros(int lecturaLuz, int contadorTemperatura)
+{
+  if (lecturaLuz < 90)
+  {
+    mostrarNumeros(contadorTemperatura);
+  }
+  else
+  {
+    digitalWrite(A4, LOW);
+  	digitalWrite(A5, LOW);
+  }
+}
+
+
+void prenderApagarMotor(int temperatura)
+{
+  /*
+  controla el prendido y apagador del motor
+  segun la temperatura que tenga
+  si su temperatura es muy alta se sobrecalienta
+  y se apaga, de lo contrario si es muy fria
+  está demasiado bajo para que el motor funcione.
+  Pero si la temperatura está entre 0 y 100 grados inclusive,
+  el motor se prende.
+  */
+  if (temperatura > 100)
+  {
+    digitalWrite(MOTOR, LOW);
+  }
+  else
+  {
+    if (temperatura < 0)
+    {
+      digitalWrite(MOTOR, LOW);
+    }
+    else
+    {
+      digitalWrite(MOTOR, HIGH);
+    }
+  }
+}
+
+
+void mostrarTemperatura(int temperatura, int lecturaLuz)
+{
+  // muestra el valor de temperatura
+  // y el valor de luz en el monitor serial
+  Serial.print("La temperatura es: ");
+  Serial.print(temperatura);
+  Serial.print(". El valor de luz es: ");
+  Serial.println(lecturaLuz);
+}
+
+
+void mostrarNumeros(int contadorTemperatura)
+{
+  // controla el interruptor, donde se muestran primos y todos
+  // los numeros
+  if (digitalRead(INTERRUPTOR) == LOW)
+  {
+    mostrarNumero(contadorTemperatura);
+  }
+  else
+  {
+    mostrarPrimos(contadorTemperatura);
+  }
+}
+
+int controlarContador(int contadorTemperatura)
+{
+  // estas condiciones se encargan de que el contador solo
+  // llegue hasta 99 como máximo y 0 como mínimo
+  if (contadorTemperatura > 99)
+  {
+    contadorTemperatura = 99;
+  }
+  else
+  {
+    if (contadorTemperatura < 0)
+    {
+      contadorTemperatura = 0;
+    }
+  }
+}
+
+/*
+recive el valor del contador de temperatura, 
+separa el decimal y la unidad 
+en distintas variables, para luego poder mostrarlas
+en los visualizadores con la funcion numero,
+itera la funcion varias veces asi se da la multiplexación 
+*/
+void mostrarNumero(int contador)
+{
+  int decimal = contador / 10;
+  int unidad = contador - (decimal * 10);
+  for (int i = 0; i <= 40; i++)
+  {
+    numero(decimal, unidad);
+  }
+}
+
+// verifica que un número sea primo
+bool esPrimo(int contador) 
+{
+    if (contador < 2) 
+    {
+        return false; 
+    }
+
+    for (int i = 2; i * i <= contador; i++) 
+    {
+        if (contador % i == 0) 
+        {
+            return false; 
+        }
+    }
+
+    return true;
+}
+  
+// confirma que sea primo con la función esPrimo
+// para luego mostrarla con la función mostrarNumero
+void mostrarPrimos(int contador)
+{
+  bool confirmarPrimo = esPrimo(contador);
+  if (confirmarPrimo == true)
+  {
+    mostrarNumero(contador);
+  }
+}
+
+// prende el visualizador de los decimales y unidades
+// con el numero que corresponda
+void numero(int decimal, int unidad)
+{
+  switch(decimal)
+  {
+    case 0:
+      visualizadorL();
+      prenderCero();
+      unidades(unidad);
+      break;
+    case 1:
+      visualizadorL();
+      prenderUno();
+      unidades(unidad);
+      break;
+    case 2:
+      visualizadorL();
+      prenderDos();
+      unidades(unidad);
+      break;
+    case 3:
+      visualizadorL();
+      prenderTres();
+      unidades(unidad);
+      break;
+    case 4:
+      visualizadorL();
+      prenderCuatro();
+      unidades(unidad);
+      break;
+    case 5:
+      visualizadorL();
+      prenderCinco();
+      unidades(unidad);
+      break;
+    case 6:
+      visualizadorL();
+      prenderSeis();
+      unidades(unidad);
+      break;
+    case 7:
+      visualizadorL();
+      prenderSiete();
+      unidades(unidad);
+      break;
+    case 8:
+      visualizadorL();
+      prenderOcho();
+      unidades(unidad);
+      break;
+    case 9:
+      visualizadorL();
+      prenderNueve();
+      unidades(unidad);
+      break;
+  }
+}
+
+// prende el visualizador de las unidades
+// con el numero que corresponda
+void unidades(int unidad)
+{
+  switch(unidad)
+  {
+    case 0:
+      visualizadorR();
+      prenderCero();
+      break;
+    case 1:
+      visualizadorR();
+      prenderUno();
+      break;
+    case 2:
+      visualizadorR();
+      prenderDos();
+      break;
+    case 3:
+      visualizadorR();
+      prenderTres();
+      break;
+    case 4:
+      visualizadorR();
+      prenderCuatro();
+      break;
+    case 5:
+      visualizadorR();
+      prenderCinco();
+      break;
+    case 6:
+      visualizadorR();
+      prenderSeis();
+      break;
+    case 7:
+      visualizadorR();
+      prenderSiete();
+      break;
+    case 8:
+      visualizadorR();
+      prenderOcho();
+      break;
+    case 9:
+      visualizadorR();
+      prenderNueve();
+      break;
+  }
+}
+
+// prende y apaga el visualizador Left(izquierda), de ahí la L
+void visualizadorL()
+{
+  digitalWrite(VISUALIZADOR_L, LOW);
+  digitalWrite(VISUALIZADOR_R, HIGH);
+}
+
+// prende y apaga el visualizador Rigth(derecha), de ahí la R
+void visualizadorR()
+{
+  digitalWrite(VISUALIZADOR_L, HIGH);
+  digitalWrite(VISUALIZADOR_R, LOW);
+}
+
+// apaga todas las leds
+void apagarLedsTotales()
+{
+  digitalWrite(A, LOW);
+  digitalWrite(B, LOW);
+  digitalWrite(C, LOW);
+  digitalWrite(D, LOW);
+  digitalWrite(E, LOW);
+  digitalWrite(F, LOW);
+  digitalWrite(G, LOW);
+}
+
+// a partir de acá, solo hay funciones que
+// prenden los leds para formar los numeros
+void prenderCero()
+{
+  digitalWrite(C, HIGH);
+  digitalWrite(E, HIGH);
+  digitalWrite(D, HIGH);
+  digitalWrite(F, HIGH);
+  digitalWrite(A, HIGH);
+  digitalWrite(B, HIGH);
+  delay(pausaGeneral);
+  apagarLedsTotales();
+}
+
+
+void prenderUno()
+{
+  digitalWrite(B, HIGH);
+  digitalWrite(C, HIGH);
+  delay(pausaGeneral);
+  apagarLedsTotales();
+}
+
+
+void prenderDos()
+{
+  digitalWrite(A, HIGH);
+  digitalWrite(B, HIGH);
+  digitalWrite(G, HIGH);
+  digitalWrite(E, HIGH);
+  digitalWrite(D, HIGH);
+  delay(pausaGeneral);
+  apagarLedsTotales();
+}
+
+
+void prenderTres()
+{
+  digitalWrite(A, HIGH);
+  digitalWrite(B, HIGH);
+  digitalWrite(C, HIGH);
+  digitalWrite(D, HIGH);
+  digitalWrite(G, HIGH);
+  delay(pausaGeneral);
+  apagarLedsTotales();
+}
+
+
+void prenderCuatro()
+{
+  digitalWrite(F, HIGH);
+  digitalWrite(G, HIGH);
+  digitalWrite(B, HIGH);
+  digitalWrite(C, HIGH);
+  delay(pausaGeneral);
+  apagarLedsTotales();
+}
+
+
+void prenderCinco()
+{
+  digitalWrite(A, HIGH);
+  digitalWrite(F, HIGH);
+  digitalWrite(G, HIGH);
+  digitalWrite(C, HIGH);
+  digitalWrite(D, HIGH);
+  delay(pausaGeneral);
+  apagarLedsTotales();
+}
+
+
+void prenderSeis()
+{
+  digitalWrite(A, HIGH);
+  digitalWrite(C, HIGH);
+  digitalWrite(D, HIGH);
+  digitalWrite(E, HIGH);
+  digitalWrite(F, HIGH);
+  digitalWrite(G, HIGH);
+  delay(pausaGeneral);
+  apagarLedsTotales();
+}
+
+
+void prenderSiete()
+{
+  digitalWrite(A, HIGH);
+  digitalWrite(B, HIGH);
+  digitalWrite(C, HIGH);
+  delay(pausaGeneral);
+  apagarLedsTotales();
+}
+
+
+void prenderOcho()
+{
+  digitalWrite(A, HIGH);
+  digitalWrite(B, HIGH);
+  digitalWrite(C, HIGH);
+  digitalWrite(D, HIGH);
+  digitalWrite(E, HIGH);
+  digitalWrite(F, HIGH);
+  digitalWrite(G, HIGH);
+  delay(pausaGeneral);
+  apagarLedsTotales();
+}
+
+
+void prenderNueve()
+{
+  digitalWrite(A, HIGH);
+  digitalWrite(B, HIGH);
+  digitalWrite(C, HIGH);
+  digitalWrite(D, HIGH);
+  digitalWrite(F, HIGH);
+  digitalWrite(G, HIGH);
+  delay(pausaGeneral);
+  apagarLedsTotales();
+}
