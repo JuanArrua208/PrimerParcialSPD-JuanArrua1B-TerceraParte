@@ -31,7 +31,6 @@ int unidad = 0;
 int lecturaTemp;
 int temperatura;
 int lecturaLuz;
-//int luz;
 
 // en el setup hago el pinMode de todos los elementos que uso
 void setup()
